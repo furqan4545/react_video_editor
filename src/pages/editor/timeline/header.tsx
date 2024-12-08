@@ -255,8 +255,16 @@ const ZoomControl = ({
           min={0}
           max={20}
           step={1}
+          // onValueChange={(e) => {
+          //   setLocalValue(e[0]); // Update local state
+          // }}
           onValueChange={(e) => {
-            setLocalValue(e[0]); // Update local state
+            const newValue = e[0];
+            setLocalValue(newValue);
+        
+            // Update the scale on every change so the timeline updates as the user drags
+            const zoom = getZoomByIndex(newValue);
+            onChangeTimelineScale(zoom);
           }}
           onValueCommit={() => {
             const zoom = getZoomByIndex(localValue);

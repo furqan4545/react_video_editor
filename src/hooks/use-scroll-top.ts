@@ -1,3 +1,4 @@
+// src/hooks/use-scroll-top.ts
 import { useState, useEffect } from "react";
 
 const useScrollTop = (threshold = 10) => {

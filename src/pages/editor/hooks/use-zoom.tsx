@@ -1,3 +1,4 @@
+// src/pages/editor/hooks/use-zoom.tsx
 import { ISize } from "@designcombo/types";
 import { OnPinch } from "@interactify/infinite-viewer";
 import { useCallback, useEffect, useRef, useState } from "react";

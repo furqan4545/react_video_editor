@@ -1,3 +1,4 @@
+// src/pages/editor/timeline/playhead.tsx
 import { useCurrentPlayerFrame } from "@/hooks/use-current-frame";
 import useStore from "@/pages/editor/store/use-store";
 import { MouseEvent, TouchEvent, useEffect, useRef, useState } from "react";
@@ -28,6 +29,7 @@ const Playhead = ({ scrollLeft }: { scrollLeft: number }) => {
     const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
     setDragStartX(clientX);
     setDragStartPosition(position);
+    
   };
 
   const handleMouseMove = (

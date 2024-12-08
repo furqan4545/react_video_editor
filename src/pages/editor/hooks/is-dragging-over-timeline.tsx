@@ -1,3 +1,4 @@
+// src/pages/editor/hooks/is-dragging-over-timeline.tsx
 import { useState, useEffect } from "react";
 import {
   DRAG_END,

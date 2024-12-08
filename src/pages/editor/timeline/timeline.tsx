@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import debounce from "lodash/debounce";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Header from "./header";
 import Ruler from "./ruler";
 import CanvasTimeline, {
@@ -21,6 +22,7 @@ import StateManager from "@designcombo/state";
 import {
   TIMELINE_OFFSET_CANVAS_LEFT,
   TIMELINE_OFFSET_CANVAS_RIGHT,
+  PREVIEW_FRAME_WIDTH,
 } from "../constants/constants";
 
 CanvasTimeline.registerItems({
@@ -42,21 +44,37 @@ const Timeline = ({ stateManager }: { stateManager: StateManager }) => {
   const canvasRef = useRef<CanvasTimeline | null>(null);
   const verticalScrollbarVpRef = useRef<HTMLDivElement>(null);
   const horizontalScrollbarVpRef = useRef<HTMLDivElement>(null);
-  const { scale, playerRef, fps, duration, setState, timeline } = useStore();
+  const { scale, playerRef, fps, duration, setState, timeline } = useStore() as any;
   const currentFrame = useCurrentPlayerFrame(playerRef!);
   const [canvasSize, setCanvasSize] = useState(EMPTY_SIZE);
   const [size, setSize] = useState<{ width: number; height: number }>(
     EMPTY_SIZE,
   );
 
+  const debouncedOnScroll = useMemo(
+    () =>
+      debounce((v: { scrollTop: number; scrollLeft: number }) => {
+        if (
+          horizontalScrollbarVpRef.current &&
+          verticalScrollbarVpRef.current
+        ) {
+          verticalScrollbarVpRef.current.scrollTop = -v.scrollTop;
+          horizontalScrollbarVpRef.current.scrollLeft = -v.scrollLeft;
+          setScrollLeft(-v.scrollLeft);
+        }
+      }, 16), // roughly 60fps
+    [],
+  );
+
   const { setTimeline } = useStore();
-  const onScroll = (v: { scrollTop: number; scrollLeft: number }) => {
-    if (horizontalScrollbarVpRef.current && verticalScrollbarVpRef.current) {
-      verticalScrollbarVpRef.current.scrollTop = -v.scrollTop;
-      horizontalScrollbarVpRef.current.scrollLeft = -v.scrollLeft;
-      setScrollLeft(-v.scrollLeft);
-    }
-  };
+
+  // Replace the existing onScroll with:
+  const onScroll = useCallback(
+    (v: { scrollTop: number; scrollLeft: number }) => {
+      debouncedOnScroll(v);
+    },
+    [debouncedOnScroll],
+  );
 
   useEffect(() => {
     const position = timeMsToUnits((currentFrame / fps) * 1000, scale.zoom);
@@ -85,6 +103,25 @@ const Timeline = ({ stateManager }: { stateManager: StateManager }) => {
   }, [currentFrame]);
 
   useEffect(() => {
+    const containerEl = containerRef.current;
+    if (!containerEl) return;
+
+    const resizeObserver = new ResizeObserver(
+      debounce((entries) => {
+        const entry = entries[0];
+        if (entry) {
+          const { width, height } = entry.contentRect;
+          setCanvasSize({ width, height });
+          canvasRef.current?.resize(width, height);
+        }
+      }, 16),
+    );
+
+    resizeObserver.observe(containerEl);
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  useEffect(() => {
     const canvasEl = canvasElRef.current;
     const containerEl = containerRef.current;
     if (!canvasEl || !containerEl) return;
@@ -98,6 +135,7 @@ const Timeline = ({ stateManager }: { stateManager: StateManager }) => {
         width: containerWidth,
         height: 0,
       },
+      selection: false,
       selectionColor: "rgba(0, 216, 214,0.1)",
       selectionBorderColor: "rgba(0, 216, 214,1.0)",
       onScroll,
@@ -151,12 +189,13 @@ const Timeline = ({ stateManager }: { stateManager: StateManager }) => {
     const itemsDetailsSubscription = stateManager.subscribeToAddOrRemoveItems(
       () => {
         const currentState = stateManager.getState();
-        setState({
+        setState((prev: any) => ({
+          ...prev,
           trackItemDetailsMap: currentState.trackItemDetailsMap,
           trackItemsMap: currentState.trackItemsMap,
           trackItemIds: currentState.trackItemIds,
           tracks: currentState.tracks,
-        });
+        }));
       },
     );
 
@@ -181,22 +220,27 @@ const Timeline = ({ stateManager }: { stateManager: StateManager }) => {
     };
   }, []);
 
-  const handleOnScrollH = (e: React.UIEvent<HTMLDivElement, UIEvent>) => {
-    const scrollLeft = e.currentTarget.scrollLeft;
-    if (canScrollRef.current) {
-      const canvas = canvasRef.current!;
-      canvas.scrollTo({ scrollLeft });
-    }
-    setScrollLeft(scrollLeft);
-  };
+  // Memoize the scroll handlers
+  const handleOnScrollH = useCallback(
+    (e: React.UIEvent<HTMLDivElement, UIEvent>) => {
+      const scrollLeft = e.currentTarget.scrollLeft;
+      if (canScrollRef.current) {
+        canvasRef.current?.scrollTo({ scrollLeft });
+      }
+      setScrollLeft(scrollLeft);
+    },
+    [],
+  );
 
-  const handleOnScrollV = (e: React.UIEvent<HTMLDivElement, UIEvent>) => {
-    const scrollTop = e.currentTarget.scrollTop;
-    if (canScrollRef.current) {
-      const canvas = canvasRef.current!;
-      canvas.scrollTo({ scrollTop });
-    }
-  };
+  const handleOnScrollV = useCallback(
+    (e: React.UIEvent<HTMLDivElement, UIEvent>) => {
+      const scrollTop = e.currentTarget.scrollTop;
+      if (canScrollRef.current) {
+        canvasRef.current?.scrollTo({ scrollTop });
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     const addEvents = subject.pipe(
@@ -219,14 +263,16 @@ const Timeline = ({ stateManager }: { stateManager: StateManager }) => {
     };
   }, []);
 
-  const onClickRuler = (units: number) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  const onClickRuler = useCallback(
+    (units: number) => {
+      if (!canvasRef.current || !playerRef?.current) return;
+      const time = unitsToTimeMs(units, scale.zoom);
+      playerRef.current.seekTo((time * fps) / 1000);
+    },
+    [scale.zoom, fps],
+  );
 
-    const time = unitsToTimeMs(units, scale.zoom);
-    playerRef?.current?.seekTo((time * fps) / 1000);
-  };
-
+  
   useEffect(() => {
     const availableScroll = horizontalScrollbarVpRef.current?.scrollWidth;
     if (!availableScroll || !timeline) return;
@@ -236,9 +282,11 @@ const Timeline = ({ stateManager }: { stateManager: StateManager }) => {
     }
   }, [scale]);
 
+
   return (
     <div className="relative h-80 w-full overflow-hidden bg-background">
       <Header />
+      {/* <Ruler onClick={onClickRuler} scrollLeft={scrollLeft} /> */}
       <Ruler onClick={onClickRuler} scrollLeft={scrollLeft} />
       <Playhead scrollLeft={scrollLeft} />
       <div className="flex">

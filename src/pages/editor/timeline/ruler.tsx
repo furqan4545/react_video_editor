@@ -42,6 +42,9 @@ const Ruler = (props: RulerProps) => {
     height: height, // Increased height for text space
   });
 
+  // test seek
+  const [isDragging, setIsDragging] = useState(false);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (canvas) {
@@ -158,21 +161,60 @@ const Ruler = (props: RulerProps) => {
     context.restore();
   };
 
-  const handleClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
+  /// test seek //////
+
+  const handleTimelineClick = (clickX: number) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !onClick) return;
 
-    // Get the bounding box of the canvas to calculate the relative click position
     const rect = canvas.getBoundingClientRect();
-    const clickX = event.clientX - rect.left;
+    const timelineStart = TIMELINE_OFFSET_X + TIMELINE_OFFSET_CANVAS_LEFT;
+    const relativePosition = clickX - rect.left - timelineStart;
 
-    // Calculate total x position, including scrollPos
-    const totalX =
-      clickX + scrollPos - TIMELINE_OFFSET_X - TIMELINE_OFFSET_CANVAS_LEFT;
+    console.log({
+      clickX,
+      timelineStart,
+      relativePosition,
+      scale: scale.zoom,
+      scrollPos
+    });
 
-    onClick?.(totalX);
-    // Here you can handle the result as needed
+    if (relativePosition >= 0) {
+      onClick(relativePosition + scrollPos);
+    }
   };
+
+  const handleMouseDown = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    setIsDragging(true);
+    handleTimelineClick(event.clientX);
+  };
+
+  // Move handleMouseMove to document level when dragging starts
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!isDragging) return;
+      handleTimelineClick(event.clientX);
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      // Add document-level event listeners when dragging starts
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]); // Depend on isDragging state
+  // test end here
+
+
 
   return (
     <div
@@ -184,10 +226,44 @@ const Ruler = (props: RulerProps) => {
         backgroundColor: "transparent",
       }}
     >
+
       <canvas
-        onMouseUp={handleClick}
         ref={canvasRef}
         height={canvasSize.height}
+        style={{ 
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '32px'
+        }}
+      />
+
+      {/* Clickable Area */}
+      <div 
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '44px', // Height to cover scale and extend to line
+          cursor: 'pointer',
+          zIndex: 1 // Ensure it's above canvas but below other elements
+        }}
+        onMouseDown={handleMouseDown}
+      />
+      
+      {/* Separate Line */}
+      <div 
+        style={{
+          position: 'absolute',
+          top: '42px',
+          left: 0,
+          width: '100%',
+          height: '2px',
+          backgroundColor: '#d4d4d8',
+          pointerEvents: 'none'
+        }}
       />
     </div>
   );
