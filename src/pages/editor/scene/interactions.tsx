@@ -1,4 +1,3 @@
-// src/pages/editor/scene/interactions.tsx
 import { useEffect, useRef, useState } from "react";
 import Selection from "@interactify/selection";
 import Moveable from "@interactify/moveable";
@@ -76,8 +75,7 @@ export function SceneInteractions({
       hitRate: 0,
       selectableTargets: [".designcombo-scene-item"],
       selectFromInside: false,
-      // selectByClick: true,
-      selectByClick: false,  // <-- This allows selection on click
+      selectByClick: true,
       toggleContinueSelect: "shift",
     })
       .on("select", (e) => {

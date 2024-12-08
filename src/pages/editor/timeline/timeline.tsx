@@ -286,7 +286,6 @@ const Timeline = ({ stateManager }: { stateManager: StateManager }) => {
   return (
     <div className="relative h-80 w-full overflow-hidden bg-background">
       <Header />
-      {/* <Ruler onClick={onClickRuler} scrollLeft={scrollLeft} /> */}
       <Ruler onClick={onClickRuler} scrollLeft={scrollLeft} />
       <Playhead scrollLeft={scrollLeft} />
       <div className="flex">
