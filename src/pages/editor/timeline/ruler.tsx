@@ -169,6 +169,13 @@ const Ruler = (props: RulerProps) => {
 
     const rect = canvas.getBoundingClientRect();
     const timelineStart = TIMELINE_OFFSET_X + TIMELINE_OFFSET_CANVAS_LEFT;
+
+    // Check if click is in the left margin area (before timeline start)
+    if (clickX - rect.left < timelineStart) {
+      // If clicked in left margin, move to 0
+      onClick(0);
+      return;
+    }
     const relativePosition = clickX - rect.left - timelineStart;
 
     console.log({
@@ -176,7 +183,7 @@ const Ruler = (props: RulerProps) => {
       timelineStart,
       relativePosition,
       scale: scale.zoom,
-      scrollPos
+      scrollPos,
     });
 
     if (relativePosition >= 0) {
@@ -184,7 +191,9 @@ const Ruler = (props: RulerProps) => {
     }
   };
 
-  const handleMouseDown = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+  const handleMouseDown = (
+    event: React.MouseEvent<HTMLDivElement, MouseEvent>,
+  ) => {
     setIsDragging(true);
     handleTimelineClick(event.clientX);
   };
@@ -202,19 +211,17 @@ const Ruler = (props: RulerProps) => {
 
     if (isDragging) {
       // Add document-level event listeners when dragging starts
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
     }
 
     // Cleanup
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
     };
   }, [isDragging]); // Depend on isDragging state
   // test end here
-
-
 
   return (
     <div
@@ -226,43 +233,42 @@ const Ruler = (props: RulerProps) => {
         backgroundColor: "transparent",
       }}
     >
-
       <canvas
         ref={canvasRef}
         height={canvasSize.height}
-        style={{ 
-          position: 'absolute',
+        style={{
+          position: "absolute",
           top: 0,
           left: 0,
-          width: '100%',
-          height: '32px'
+          width: "100%",
+          height: "32px",
         }}
       />
 
       {/* Clickable Area */}
-      <div 
+      <div
         style={{
-          position: 'absolute',
+          position: "absolute",
           top: 0,
           left: 0,
-          width: '100%',
-          height: '44px', // Height to cover scale and extend to line
-          cursor: 'pointer',
-          zIndex: 1 // Ensure it's above canvas but below other elements
+          width: "100%",
+          height: "44px", // Height to cover scale and extend to line
+          cursor: "pointer",
+          zIndex: 1, // Ensure it's above canvas but below other elements
         }}
         onMouseDown={handleMouseDown}
       />
-      
+
       {/* Separate Line */}
-      <div 
+      <div
         style={{
-          position: 'absolute',
-          top: '42px',
+          position: "absolute",
+          top: "42px",
           left: 0,
-          width: '100%',
-          height: '2px',
-          backgroundColor: '#d4d4d8',
-          pointerEvents: 'none'
+          width: "100%",
+          height: "2px",
+          backgroundColor: "#d4d4d8",
+          pointerEvents: "none",
         }}
       />
     </div>

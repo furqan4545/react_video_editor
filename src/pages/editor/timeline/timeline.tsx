@@ -135,7 +135,7 @@ const Timeline = ({ stateManager }: { stateManager: StateManager }) => {
         width: containerWidth,
         height: 0,
       },
-      selection: false,
+      selection: true,
       selectionColor: "rgba(0, 216, 214,0.1)",
       selectionBorderColor: "rgba(0, 216, 214,1.0)",
       onScroll,
